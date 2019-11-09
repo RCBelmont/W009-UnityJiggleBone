@@ -1,0 +1,5 @@
+﻿JiggleBone/.idea
+*.csproj
+*.sln
+JiggleBone/Temp
+JiggleBone/Library
