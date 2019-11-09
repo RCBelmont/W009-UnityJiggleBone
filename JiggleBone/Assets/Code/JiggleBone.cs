@@ -13,6 +13,8 @@ class BoneParticle
     public BoneParticle ParentBone;
     public Vector3 DefaultLocalPos;
     public int BoneIdx = 0;
+    public float DefaultDisToParent = 0.0f;
+    public Quaternion DefaultRotate;
 
     public BoneParticle(GameObject obj, bool isRoot, int boneIdx = 0, BoneParticle parentBone = null)
     {
@@ -22,6 +24,14 @@ class BoneParticle
         CurrPos = TargetPos = BoneTransform.position;
         DefaultLocalPos = BoneTransform.localPosition;
         BoneIdx = boneIdx;
+        ParentBone = parentBone;
+        if (parentBone != null)
+        {
+            DefaultDisToParent = Vector3.Distance(BoneTransform.position, parentBone.BoneTransform.position);
+        }
+
+        DefaultRotate = BoneTransform.localRotation;
+
     }
 }
 
@@ -58,14 +68,20 @@ public class JiggleBone : MonoBehaviour
             BoneParticle bp = _boneList[i];
             if (bp.IsRoot)
             {
+                bp.CurrPos = bp.BoneTransform.position;
                 continue;
             }
 
             Vector3 moveDir = bp.TargetPos - bp.CurrPos;
             float totalDistance = moveDir.magnitude;
 
-            bp.CurrPos += moveDir.normalized * totalDistance / 5.0f;
-            bp.BoneTransform.position = bp.CurrPos;
+            Vector3 dynamicPos = bp.CurrPos + moveDir.normalized * (totalDistance / (Stiff * bp.BoneIdx));
+            Vector3 parentToThisDir = (dynamicPos - bp.ParentBone.CurrPos).normalized;
+            bp.CurrPos = bp.ParentBone.CurrPos + parentToThisDir * bp.DefaultDisToParent;
+            
+           
+            bp.BoneTransform.position = bp.CurrPos; //bp.CurrPos;
+            bp.BoneTransform.LookAt(bp.ParentBone.CurrPos);
         }
     }
 
@@ -79,6 +95,7 @@ public class JiggleBone : MonoBehaviour
                 continue;
             }
 
+            bp.BoneTransform.localRotation = bp.DefaultRotate;
             bp.BoneTransform.localPosition = bp.DefaultLocalPos;
             bp.TargetPos = bp.BoneTransform.position;
         }
@@ -89,6 +106,7 @@ public class JiggleBone : MonoBehaviour
         int childCount = root.BoneTransform.childCount;
         if (childCount > 0)
         {
+          
             Transform child = root.BoneTransform.GetChild(0);
             BoneParticle newParticle = new BoneParticle(child.gameObject, false, _boneList.Count, root);
             _boneList.Add(newParticle);
